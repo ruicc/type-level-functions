@@ -3,16 +3,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 import GHC.TypeLits
+import Data.Type.Equality
 
 
 type family Sum (ns :: [Nat]) :: Nat where
 --    Sum ns = Foldl Add 0 ns
     Sum '[] = 0
-    Sum (a ': as) = a + Sum as
+    Sum (n ': ns) = n + Sum ns
 
-type family Product (a :: [Nat]) :: Nat where
+type family Product (n :: [Nat]) :: Nat where
     Product '[] = 0
-    Product (a ': as) = a * Product as
+    Product (n ': ns) = n * Product ns
 
 type family Concat (as :: [k]) (bs :: [k]) :: [k] where
     Concat a '[] = a
@@ -41,9 +42,9 @@ type family Foldl (f :: b -> a -> b) (z :: b) (as :: [a]) :: b where
     Foldl f z '[] = '[]
     Foldl f z (a ': as) = Foldl f (f z a) as
 
-type family Filter (f :: a -> Bool) (as :: [a]) :: [a] where
-    Filter f '[] = '[]
-    Filter f (a ': as) = If (f a) (a ': as) as
+type family Filter (p :: a -> Bool) (as :: [a]) :: [a] where
+    Filter p '[] = '[]
+    Filter p (a ': as) = If (p a) (a ': Filter p as) (Filter p as)
 
 type family Length (as :: [a]) :: Nat where
     Length '[] = 0
@@ -76,9 +77,94 @@ type family And (bs :: [Bool]) :: Bool where
      And (True ': bs) = And bs
      And (False ': bs) = False
 
+type family Any (p :: a -> Bool) (as :: [a]) :: Bool where
+     Any p '[] = False
+     Any p (a ': as) = If (p a) True (Any p as)
+
 type family Not (b :: Bool) :: Bool where
      Not True = False
      Not False = True
+
+--type enumFromThenTo (a :: k) (b :: k) (c :: k) :: [k]
+--type instance enumFromThenTo a b c
+
+type family Fst (t :: (a, b)) :: a where
+    Fst '(a, b) = a
+
+type family Snd (t :: (a, b)) :: b where
+    Snd '(a, b) = b
+
+type family Odd (n :: Nat) :: Bool where
+    Odd 0 = False
+    Odd 1 = True
+    Odd n = Odd (n - 2)
+
+type family Even (n :: Nat) :: Bool where
+    Even 0 = True
+    Even 1 = False
+    Even n = Even (n - 2)
+
+type family Min (n :: Nat) (m :: Nat) :: Nat where
+    Min n m = If (n <=? m) n m
+
+type family Max (n :: Nat) (m :: Nat) :: Nat where
+    Max n m = If (n <=? m) m n
+
+type family Maybe_ (t :: b) (f :: a -> b) (ma :: Maybe a) :: b where
+    Maybe_ b f ('Just a) = f a
+    Maybe_ b f 'Nothing = b
+
+type family Lookup (t :: a) (ls :: [(a, b)]) :: Maybe b where
+    Lookup t '[] = 'Nothing
+    Lookup t ('(a, b) ': ls) = If (a == b) ('Just b) (Lookup t ls)
+
+type family (b1 :: Bool) || (b2 :: Bool) :: Bool where
+    True || b2 = True
+    False || b2 = b2
+
+type family (b1 :: Bool) && (b2 :: Bool) :: Bool where
+    True && b2 = b2
+    False && b2 = False
+
+type family Abs (n :: Nat) :: Nat where
+    Abs n = If (n <=? 0) (Negate n) n
+
+type family Negate (n :: Nat) :: Nat where
+    Negate n = 0 - n
+
+type family Succ (n :: Nat) :: Nat where
+    Succ n = n + 1
+
+type family Pred (n :: Nat) :: Nat where
+    Pred n = n - 1
+
+type family Head (as :: [a]) :: a where
+    Head (a ': as) = a
+
+type family Tail (as :: [a]) :: [a] where
+    Tail (a ': as) = as
+
+type family Last (as :: [a]) :: a where
+    Last (a ': '[]) = a
+    Last (a ': as) = Last as
+
+type family Init (as :: [a]) :: [a] where
+    Init (a ': '[]) = '[]
+    Init (a ': as) = a ': Init as
+
+type family Mod (n :: Nat) (m :: Nat) :: Nat where
+    Mod n m =
+        If ((0 <=? n) && (n <=? (m - 1)))
+            n
+            (Mod (n - m) m)
+
+--------------------------------------------------------------------------------
+type family (ma :: Maybe a) >>= (f :: a -> Maybe b) :: Maybe b where
+    ('Just a) >>= f = f a
+    'Nothing >>= f = 'Nothing
+
+type family Return (e :: a) :: Maybe a where
+    Return a = 'Just a
 
 --------------------------------------------------------------------------------
 type family Const (a :: k) (b :: l) :: k where
