@@ -180,13 +180,29 @@ type family If (p :: Bool) (a :: k) (b :: k) :: k where
 type family Add (a :: Nat) (b :: Nat) :: Nat where
     Add a b = a + b
 
-type family Add1 (a :: Nat) :: Nat where
-    Add1 a = a + 1
-
 --------------------------------------------------------------------------------
-type Con = Concat (1 ': [2, 4, 8]) [Add1 (Add1 1), 3, 5]
+-- Type level Fizzbuzz
 
-a :: Const Int (Sum Con)
-a = 3
+data FB where
+    N :: Nat -> FB
+    S :: Symbol -> FB
+
+type family Elm (n :: Nat) :: FB where
+    Elm n =
+        If (Mod n 15 == 0)
+            (S "FizzBuzz")
+            (If (Mod n 5 == 0)
+                (S "Buzz")
+                (If (Mod n 3 == 0)
+                    (S "Fizz")
+                    (N n)))
+
+type family FizzBuzz (n :: Nat) :: [FB] where
+    FizzBuzz n = FizzBuzz' [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+
+type family FizzBuzz' (ns :: [Nat]) :: [FB] where
+    FizzBuzz' '[] = '[]
+    FizzBuzz' (n ': ns) = Elm n ': FizzBuzz' ns
+
 
 main = putStrLn "OK!"
