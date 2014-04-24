@@ -15,10 +15,25 @@ type family Product (n :: [Nat]) :: Nat where
     Product '[] = 0
     Product (n ': ns) = n * Product ns
 
-type family Concat (as :: [k]) (bs :: [k]) :: [k] where
-    Concat a '[] = a
-    Concat '[] b = b
-    Concat (a ': as) bs = a ': Concat as bs
+type family (++) (as :: [k]) (bs :: [k]) :: [k] where
+    (++) a '[] = a
+    (++) '[] b = b
+    (++) (a ': as) bs = a ': (as ++ bs)
+
+type family ($) (f :: a -> b) (x :: a) :: b where
+    f $ x = f x
+infixr 0 $
+
+type family Elem (e :: a) (as :: [a]) :: Bool where
+    Elem e '[] = False
+    Elem e (a ': as) = If (e == a) True (Elem e as)
+
+type family NotElem (e :: a) (as :: [a]) :: Bool where
+    NotElem e as = Not (Elem e as)
+
+type family (!!) (as :: [a]) (n :: Nat) :: a where
+    (!!) (a ': as) 0 = a
+    (!!) (a ': as) n = as !! (n - 1)
 
 type family Zip (as :: [k]) (bs :: [l]) :: [(k, l)] where
     Zip a '[] = '[]
@@ -59,6 +74,7 @@ type family Reverse (as :: [a]) :: [a] where
     Reverse '[] = '[]
     Reverse as = Rev as '[]
 
+-- Helper
 type family Rev (as :: [a]) (bs :: [a]) :: [a] where
     Rev '[] k = k
     Rev (a ': as) k = Rev as (a ': k)
@@ -85,8 +101,12 @@ type family Not (b :: Bool) :: Bool where
      Not True = False
      Not False = True
 
---type enumFromThenTo (a :: k) (b :: k) (c :: k) :: [k]
---type instance enumFromThenTo a b c
+type family EnumFromThenTo (from :: Nat) (thn :: Nat) (to :: Nat) :: [Nat] where
+    EnumFromThenTo from thn to =
+        from ': If (to <=? 2 * thn - from) (EnumFromThenTo thn (2 * thn - from) to) '[]
+
+type family EnumFromTo (from :: Nat) (to :: Nat) :: [Nat] where
+    EnumFromTo from to = EnumFromThenTo from (from + 1) to
 
 type family Fst (t :: (a, b)) :: a where
     Fst '(a, b) = a
@@ -113,6 +133,18 @@ type family Max (n :: Nat) (m :: Nat) :: Nat where
 type family Maybe_ (t :: b) (f :: a -> b) (ma :: Maybe a) :: b where
     Maybe_ b f ('Just a) = f a
     Maybe_ b f 'Nothing = b
+
+type family FromMaybe (e :: a) (ma :: Maybe a) :: a where
+    FromMaybe e ('Just a) = a
+    FromMaybe a 'Nothing = a
+
+type family MaybeToList (ma :: Maybe a) :: [a] where
+    MaybeToList ('Just a) = '[a]
+    MaybeToList 'Nothing = '[]
+
+type family ListToMaybe (as :: [a]) :: Maybe a where
+    ListToMaybe '[] = 'Nothing
+    ListToMaybe (a ': as) = 'Just a
 
 type family Lookup (t :: a) (ls :: [(a, b)]) :: Maybe b where
     Lookup t '[] = 'Nothing
@@ -158,7 +190,30 @@ type family Mod (n :: Nat) (m :: Nat) :: Nat where
             n
             (Mod (n - m) m)
 
+type family MapMaybe (f :: a -> Maybe b) (as :: [a]) :: [b] where
+    MapMaybe f '[] = '[]
+    MapMaybe f (a ': as) = MapMaybe' (f a) (MapMaybe f as)
+
+-- Helper
+type family MapMaybe' (mb :: Maybe b) (bs :: [b]) :: [b] where
+    MapMaybe' ('Just b) bs = b ': bs
+    MapMaybe' 'Nothing bs = bs
+
+type family Concat (as :: [[a]]) :: [a] where
+    Concat '[] = '[]
+    Concat (a ': as) = a ++ Concat as
+
+type family ConcatMap (f :: a -> [b]) (as :: [a]) :: [b] where
+    ConcatMap f as = Concat (Map f as)
+
 --------------------------------------------------------------------------------
+type family Bind (m :: ma) (f :: a -> mb) :: mb
+type instance Bind ('Just a) f = f a
+type instance Bind 'Nothing f = 'Nothing
+type instance Bind ('Right a) f = f a
+type instance Bind ('Left b) f = 'Left b
+type instance Bind ls f = ConcatMap f ls
+
 type family (ma :: Maybe a) >>= (f :: a -> Maybe b) :: Maybe b where
     ('Just a) >>= f = f a
     'Nothing >>= f = 'Nothing
@@ -198,7 +253,7 @@ type family Elm (n :: Nat) :: FB where
                     (N n)))
 
 type family FizzBuzz (n :: Nat) :: [FB] where
-    FizzBuzz n = FizzBuzz' [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    FizzBuzz n = FizzBuzz' (EnumFromTo 1 n)
 
 type family FizzBuzz' (ns :: [Nat]) :: [FB] where
     FizzBuzz' '[] = '[]
