@@ -12,7 +12,7 @@ type family Sum (ns :: [Nat]) :: Nat where
     Sum (n ': ns) = n + Sum ns
 
 type family Product (n :: [Nat]) :: Nat where
-    Product '[] = 0
+    Product '[] = 1
     Product (n ': ns) = n * Product ns
 
 type family (++) (as :: [k]) (bs :: [k]) :: [k] where
@@ -259,5 +259,6 @@ type family FizzBuzz' (ns :: [Nat]) :: [FB] where
     FizzBuzz' '[] = '[]
     FizzBuzz' (n ': ns) = Elm n ': FizzBuzz' ns
 
-
+main :: IO ()
 main = putStrLn "OK!"
+
